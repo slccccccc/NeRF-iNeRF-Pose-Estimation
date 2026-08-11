@@ -43,8 +43,6 @@ def load_nerf(args, device):
 
     #print(ckpt_name)
     ckpt_path = os.path.join(ckpt_dir, ckpt_name)
-    #lego_path = "D:\\bishe\\NeRF\\fast-inerf-main\\checkpoints\\lego.tar"
-    #c_path = "D:\\bishe\\NeRF\\fast-inerf-main\\checkpoints\\PROPS-NeRF-200k.tar"
     print('Found checkpoints', ckpt_path)
     print('Reloading from', ckpt_path)
     ckpt = torch.load(ckpt_path+'.tar')
