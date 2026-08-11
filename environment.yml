@@ -1,29 +1,18 @@
-# run: conda env create -f environment.yml
-name: nerf-pose-estimation
+name: nerf-camera-tools
 channels:
   - pytorch
-  - defaults
+  - conda-forge
 dependencies:
-  - python>=3.8
+  - python=3.10
+  - pytorch
+  - torchvision
+  - numpy
+  - scipy
+  - matplotlib
   - pip
   - pip:
-      - pyhocon==0.3.55
-      - opencv-contrib-python==4.5.5.64
-      # - dotmap
-      - tensorboard
+      - configargparse
+      - opencv-contrib-python
       - imageio
       - imageio-ffmpeg
-      - pyquaternion
-      - trimesh
-      - pyrender
-      # - ipdb
-      # - pretrainedmodels
-      # - lpips
-  - scipy
-  - numpy
-  - matplotlib
-  - configargparse
-  # - pytorch==1.8.1
-  # - torchvision==0.9.1
-  - scikit-image
-  - tqdm
+      - tqdm

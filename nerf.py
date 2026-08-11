@@ -9,7 +9,7 @@ from tqdm import tqdm, trange
 
 from utils.render_utils import get_rays, get_rays_np, render, render_path, to8b, img2mse, mse2psnr
 
-from utils.nerf_utils import load_blender_data, config_parser, load_llff_data
+from utils.blender_loader import load_blender_data, config_parser
 
 
 
@@ -254,10 +254,8 @@ def create_nerf(args):
     }
 
     # NDC only good for LLFF-style forward facing data
-    if args.dataset_type != 'llff' or args.no_ndc:
-        print('Not ndc!')
-        render_kwargs_train['ndc'] = False
-        render_kwargs_train['lindisp'] = args.lindisp
+    render_kwargs_train['ndc'] = False
+    render_kwargs_train['lindisp'] = args.lindisp
 
     render_kwargs_test = {k : render_kwargs_train[k] for k in render_kwargs_train}
     render_kwargs_test['perturb'] = False
@@ -270,52 +268,16 @@ def train():
     parser = config_parser()
     args = parser.parse_args()
 
-    # Load data
+    # The public release supports Blender-style synthetic datasets only.
     K = None
-    if args.dataset_type == 'llff':
-        images, poses, bds, render_poses, i_test = load_llff_data(args.datadir, args.factor,
-                                                                  recenter=True, bd_factor=.75,
-                                                                  spherify=args.spherify)
-        hwf = poses[0,:3,-1]
-        poses = poses[:,:3,:4]
-        print('Loaded llff', images.shape, render_poses.shape, hwf, args.datadir)
-        if not isinstance(i_test, list):
-            i_test = [i_test]
-
-        if args.llffhold > 0:
-            print('Auto LLFF holdout,', args.llffhold)
-            i_test = np.arange(images.shape[0])[::args.llffhold]
-
-        i_val = i_test
-        i_train = np.array([i for i in np.arange(int(images.shape[0])) if
-                        (i not in i_test and i not in i_val)])
-
-        print('DEFINING BOUNDS')
-        if args.no_ndc:
-            near = np.ndarray.min(bds) * .9
-            far = np.ndarray.max(bds) * 1.
-            
-        else:
-            near = 0.
-            far = 1.
-        print('NEAR FAR', near, far)
-
-    elif args.dataset_type == 'blender':
-        images, poses, render_poses, hwf, i_split = load_blender_data(args.datadir, args.half_res, args.testskip)
-        print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
-        i_train, i_val, i_test = i_split
-
-        near = 2.
-        far = 6.
-
-        if args.white_bkgd:
-            images = images[...,:3]*images[...,-1:] + (1.-images[...,-1:])
-        else:
-            images = images[...,:3]
-
+    images, poses, render_poses, hwf, i_split = load_blender_data(args.datadir, args.half_res, args.testskip)
+    print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
+    i_train, i_val, i_test = i_split
+    near, far = 2.0, 6.0
+    if args.white_bkgd:
+        images = images[..., :3] * images[..., -1:] + (1.0 - images[..., -1:])
     else:
-        print('Unknown dataset type', args.dataset_type, 'exiting')
-        return
+        images = images[..., :3]
 
     # Cast intrinsics to right types
     H, W, focal = hwf

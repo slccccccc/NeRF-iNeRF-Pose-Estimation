@@ -1,26 +1,27 @@
-# NeRF-iNeRF-Pose-Estimation
+# NeRF and Fast Pose Estimation Tools
 
-PyTorch implementations and experiments for neural radiance field
-reconstruction, inverse NeRF camera-pose optimization, and PoseCNN-based pose
-initialization. The release also includes a robust classical-camera geometry
-baseline for calibration and known 2D-3D correspondences.
+This public release contains a Blender-style synthetic-data NeRF runner, a
+clean-room differentiable camera-pose refiner, and independent
+camera-calibration and robust PnP utilities. It is deliberately limited to
+components with clear redistribution terms.
 
 ## Public-release improvements
 
 - Data and checkpoint paths are supplied through command-line arguments.
-- The launchers no longer force CUDA as PyTorch's default tensor type.
-- Chessboard calibration uses ordered detections rather than the four strongest
-  image corners.
-- Pose estimation uses `solvePnPRansac`, LM refinement, and reports inlier
-  ratio and reprojection RMSE.
+- The launcher does not force CUDA as PyTorch's default tensor type.
+- Blender JSON loading is explicit and self-contained.
+- Chessboard calibration uses ordered detections rather than the four
+  strongest image corners.
+- Pose estimation uses `solvePnPRansac`, LM refinement, and reports inlier ratio
+  and reprojection RMSE.
 - Video extraction stops before writing an invalid frame and uses stable names.
+- Pose refinement uses an SE(3) exponential map, coarse-to-fine image scales,
+  random ray sampling, robust Charbonnier loss, gradient clipping, and early
+  stopping with a JSON optimization trace.
 
-## Classical pose geometry
+## Camera calibration and pose estimation
 
-The original corner script was not a reliable calibration method: selecting
-four points with `goodFeaturesToTrack` does not establish their physical order
-or guarantee that they belong to one rigid planar target. The public baseline
-requires an ordered chessboard pattern for calibration:
+Calibration from ordered chessboard observations:
 
 ```bash
 python src/calibrate_camera.py \
@@ -31,7 +32,7 @@ python src/calibrate_camera.py \
   --output outputs/camera_calibration.npz
 ```
 
-For known 2D-3D correspondences:
+Pose estimation from known 2D-3D correspondences:
 
 ```bash
 python src/estimate_pose_from_correspondences.py \
@@ -44,32 +45,53 @@ python src/estimate_pose_from_correspondences.py \
 The reported transform maps object coordinates into camera coordinates. Check
 the inlier ratio and pixel reprojection RMSE before using the pose downstream.
 
-## NeRF and iNeRF
+## NeRF
 
-Supply a public NeRF synthetic or LLFF dataset and an output directory through
-the configuration files or command line:
-
-```bash
-python scripts/run_nerf.py --config configs/nerf/lego.txt
-python scripts/run_inerf.py --config configs/inerf/lego.txt
-```
-
-PoseCNN requires the separately distributed PROPS-Pose dataset, which is not
-included:
+The NeRF runner accepts a Blender-style synthetic dataset containing
+`transforms_train.json`, `transforms_val.json`, and `transforms_test.json`:
 
 ```bash
-python scripts/run_posecnn.py --train --data-dir path/to/PROPS-Pose-Dataset
-python scripts/run_posecnn.py --eval --data-dir path/to/PROPS-Pose-Dataset
+python scripts/run_nerf.py \
+  --datadir path/to/blender_dataset \
+  --expname lego \
+  --basedir outputs/nerf
 ```
 
-## Attribution
+## Fast pose refinement
 
-The NeRF, iNeRF, and PoseCNN components are adaptations of the projects below:
+After training a Blender NeRF, refine an initial camera pose against one
+observed RGB image. The initial pose is a `.npy` or JSON 4x4 camera-to-world
+matrix and the focal length is in pixels:
 
-- [yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch)
-- [salykovaa/inerf](https://github.com/salykovaa/inerf)
-- [DeepRob PoseCNN project](https://deeprob.org/projects/project4/)
+```bash
+python scripts/run_fast_pose.py \
+  --datadir path/to/blender_dataset \
+  --basedir outputs/nerf \
+  --expname lego \
+  --ft_path outputs/nerf/lego/100000.tar \
+  --observed-image path/to/observation.png \
+  --initial-pose path/to/initial_pose.npy \
+  --focal 555.0 \
+  --pose-output outputs/fast_pose/pose.json
+```
 
-Their original notices and licenses must be preserved when the code is
-redistributed. The added camera-calibration, robust PnP, and video-extraction
-utilities are provided under the repository license.
+The optimizer changes only the camera pose; NeRF parameters remain frozen.
+The output includes the refined pose, final twist, per-scale losses, and
+stopping diagnostics. A low photometric loss alone does not prove a unique
+camera pose, so inspect the trace and evaluate on held-out views.
+
+The public release does not include LLFF, iNeRF, PoseCNN, implicit-depth, or
+PROPS-Pose code or datasets. Those components were removed because their
+redistribution terms were not sufficiently clear for a repository-wide MIT
+release.
+
+## Attribution and licensing
+
+The NeRF core follows the MIT-licensed implementation at
+[yenchenlin/nerf-pytorch](https://github.com/yenchenlin/nerf-pytorch), and its
+copyright and license terms remain applicable to adapted core files. The
+camera-calibration, robust PnP, video-extraction, and Blender-only loader were
+added or rewritten for this release.
+
+See [`LICENSE`](LICENSE) and
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the complete scope.

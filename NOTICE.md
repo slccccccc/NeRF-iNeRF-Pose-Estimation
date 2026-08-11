@@ -1,12 +1,12 @@
 # Attribution
 
-The NeRF, iNeRF, and PoseCNN components are adapted from the following public
-projects and retain their applicable notices:
+The NeRF core follows the MIT-licensed implementation at
+<https://github.com/yenchenlin/nerf-pytorch>; its copyright and license terms
+remain applicable to the adapted core files.
 
-- <https://github.com/yenchenlin/nerf-pytorch>
-- <https://github.com/salykovaa/inerf>
-- <https://deeprob.org/projects/project4/>
+The camera-calibration, robust PnP, video-extraction, and Blender-only loading
+utilities were added or rewritten for this release. LLFF, iNeRF, implicit-depth,
+PoseCNN, and PROPS-Pose components were removed because their redistribution
+terms were not sufficiently clear for this public release.
 
-The camera-calibration, robust PnP, and video-extraction utilities were added
-for this release. Check the upstream licenses before redistributing a combined
-binary or dataset package.
+See `THIRD_PARTY_NOTICES.md` for the dependency and provenance record.
