@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+data/
+logs/
+output/
+outputs/
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.tar.gz
